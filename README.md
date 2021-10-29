@@ -1,6 +1,6 @@
 ## Embedded Microprocessor System Homework
 
-北京大学嵌入式与微处理系统课程作业
+北京大学嵌入式与微处理系统课程作业【更新中】
 
 ### Homework1
 
@@ -19,4 +19,14 @@
 2. 在ARM处理器上（模拟器或实际开发板），编译并调试性能测试程序dhrystone；
 
 3. 在ARM处理器上（模拟器或实际开发板），编译并调试性能测试程序coremark；
+
+### Homework3
+
+二选一：
+
+1. 用ARM汇编设计程序，验证ARM处理器的ARM指令和Thumb指令下执行任意两个8位无符号数相乘结果的一致性。
+
+2. 已知 A为数组B为卷积核。请用汇编程序计算，C=A*B（卷积）
+
+![](./Image/homework3.png)
 
