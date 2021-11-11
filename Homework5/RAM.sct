@@ -1,0 +1,17 @@
+LR_ROM1 0x30000000 
+{    ; load region
+    ER_ROM1 0x30000000 0x0100000  
+    {  ; load address = execution address
+		*.o (RESET, +First)
+		*(InRoot$$Sections)
+		.ANY (+RO)
+    }
+	RW_RAM1 0x30100000 0x400000  
+	{  ; RW data
+		.ANY (+RW +ZI)
+	}
+	RW_IRAM1 0x40000000 0x00001000  
+	{
+		.ANY (+RW +ZI)
+	}
+}
