@@ -78,6 +78,8 @@
 
 请用OpenMP加速方法计算边缘检测（边缘强度），评估采用OpenMP带来的加速比。
 
+![](./Image/homework9.png)
+
 ### Homework10
 
 用CUDA编程，实现Sobe算子对图像的操作（完成与实验9相同的功能）。
