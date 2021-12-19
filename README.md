@@ -83,3 +83,6 @@
 ### Homework10
 
 用CUDA编程，实现Sobe算子对图像的操作（完成与实验9相同的功能）。
+
+![](Image/homework10)
+
