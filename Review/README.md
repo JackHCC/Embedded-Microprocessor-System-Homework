@@ -127,6 +127,9 @@ SWI_Handler
   - 设置时钟，看门狗Timer，内存控制，IO端口
   - 设置中断入口IRQ_Entry
   - 实现Reset_Handler
+- BootLoader移植需要修改什么代码？
+
+
 
 ## OpenMP多核处理
 
@@ -362,3 +365,54 @@ int main()
 
 
 
+## 一些问题
+
+**Q：影响处理器性能（CPI等）的因素有哪些？**
+
+A：指令集设计，流水线深度，缓存设计，系统结构，机器周期
+
+**Q：最小ROM空间与RAM空间如何计算？**
+
+A：ROM = Code + RO + RW；RAM = RW + ZI；
+
+**Q：如果调试过程中程序工作正常，但写入 ROM 后上电程序不能正确执行，可能的原因是什么？**
+
+A：电源有问题；复位电路有问题（缺少 reset 复位程序）；BOOT 启动有问题（启动模式选择错误）；复位以后，中断向量表不在程序起始位 0x00。
+
+**Q：如果实现上电后能够自动执行，需要哪些条件？**
+
+A：  ①Keil 环境中 Linker 的 target 地址配置选项应该为： RO Base =0x00000000 RW Base = 0x30000000 
+
+​		②Output 中勾选“Create HEX file” 
+
+​		③DRAM 初始化：Initialization by code Debug Init：需要在代码中加入初始化，上电后才能正常访问 RAM map 0x48000000, 0x60000000 read write ; 
+
+​		④硬件无问题（电源，复位电路，BOOT 引导程序等）
+
+**Q：能否将中断向量表中的跳转指令“B”改成“BL”？请说明理由。**
+
+A：不能。BL和B两个指令的区別在于BL指令将当前的PC保存到LR。对于软中断来说，触发中断后。SP和LR切换到相应的模式下的SP和LR，此时LR中保存的是触发中断前的PC，如果中断向量表中的B改成BL，那么LR寄存器就会被修改，中断服务程序执行后就无法返回到触发中断的程序。
+
+**Q：影响Cache命中率的因素有什么？**
+
+A：Cache 大小，替换策略（直接相连等），程序的结构和数据的访问方式
+
+
+
+## 常见报错信息解析
+
+- “Error: A163E: Unknown opcode Mov, expecting opcode or Macro”
+  - 因为 arm 汇编器对标志符的大小写敏感，因此书写标志符及指令时，大小写要一致。在arm汇编程序中，指令、寄存器名可以全部为大写，也可以全部为小写，但是不能大小写混合使用 
+  - 编译阶段 compile，编译错误
+- “Error: L6406E: No space in execution regions with. ANY selector matching lab1.o(.text)”
+  - 提示空间不够
+  - 链接阶段错误
+- “Error: L16281E: undefined symbol main (referred from_rtentry2.o)”
+  - 错误提示为“main”这个符号未定义
+  - 链接阶段错误
+- “Error: #20: identifier “i” is undefined”
+  - 没有定义标识符“i”
+  - 编译阶段错误
+- “Error: Target DLL has been canceled. Debugger aborted”
+  - 目标 DLL（动态链接库） 已被取消，调试器终止
+  - 下载调试阶段错误
