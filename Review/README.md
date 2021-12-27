@@ -122,18 +122,118 @@ SWI_Handler
   - 启动代码不对
   - 没有将main.c文件添加到工程文件中
 - Startup.s文件的功能和作用？
-  - 设置中断向量与终端服务程序地址
+  - 设置中断向量与中断服务程序地址
   - 分配堆栈空间
   - 设置时钟，看门狗Timer，内存控制，IO端口
   - 设置中断入口IRQ_Entry
   - 实现Reset_Handler
 - BootLoader移植需要修改什么代码？
+  - Start.s是采用汇编语言编写的U-Boot程序入口代码，完成对底层硬件的初始化，其中有一个很重要的功能是从NAND FLASH中把 Stage2阶段的代码复制到 SDRAM中。在此阶段，涉及到对 NAND FLASH的读操作，在U-Boot中，没有对 NANDFLASH读操作的驱动，采用以下方法实现：通过调用 board/smdk2410/ nand_read.C中的 nand_read_11函数将 Stage2阶段的代码复制到ram中。
 
+## LED显示实验
 
+### 硬件配置
 
-## OpenMP多核处理
+- LED连接
+
+![](../Image/review-5.png)
+
+- LED连接
+  - LED1  <--> GPF4
+  - LED2  <--> GPF5
+  - LED3  <--> GPF6
+  - LED4  <--> GPF7
+- LED 控制
+  - 0  -> on
+  - 1  -> off
+
+- GPF控制(GPIO 寄存器)
+
+![](../Image/review-6.png)
+
+```
+GPFCON (4-7 Output):		0b 0101 0101 XXXX XXXX
+GPFUP  (4-7 No concern): 	0b XXXX XXXX
+GPFDAT (4-7 on): 			0b 0000 XXXX
+GPFDAT (4-7 off): 			0b 1111 XXXX
+```
+
+### C代码
+
+- 4个LED等循环闪烁（周期2秒），详细解释见注释
+
+```c
+#include<stdlib.h>	
+#include<stdio.h>
+int delay(int times); 	// 声明延时函数
+
+// 注意这两个地址是根据所给的板子型号的手册表格上查找，根据表格赋值
+int *rGPFCON = (int *) 0x56000050;	// rGPFCON配置哪些引脚需要使用，采取的模式是什么（00:Input,01:Output）,LED显示即采用输出01
+int *rGPFDAT = (int *) 0x56000054;	// rGPFDAT配置相应引脚输入的信号是高电平还是低电平，具体是高电平亮还是低电平亮看LED电路连接，本次实验的LED电路可以看出，LED引脚低电平时灯亮，要根据具体电路分析
+
+void main( void)
+{
+	*rGPFCON=0x5500;	// 0x5500 = 0b0101_0101_0000_0000;高八位的四个引脚（GPF4-7）都是01模式，即输出模式，结合CPU电路可知，LED与引脚的连接（例如：LED1对应GPF4）
+	while(1)
+	{
+		*rGPFDAT = 0x00;	// 0x00 = 0b0000_0000;高4位对应GPF引脚的输入Data信号，0表示输入低电平，此时灯亮
+		delay(1000); 		// 延时1000ms，即1s
+		*rGPFDAT = 0xf0;	// 0xf0 = 0b1111_0000;高4位对应GPF引脚的输入Data信号，1表示输入高电平，此时灯灭
+		delay(1000);
+	}
+}
+
+int delay(int times)	// 定义延时函数
+{
+	int i,j;
+	for(i=0;i<times;i++)
+		for(j=0;j<times;j++)
+		{
+		
+		}
+		return 1;
+}
+```
+
+- 知道每个引脚作用后，很容易实现想要的灯闪方式：
+
+```c
+// 知道每一位的具体作用，那么想让等怎么亮就让那一位数据（Data）信号给0即可
+// 例如：实现一个简单的流水main函数
+int main(void)
+{
+	*rGPFCON=0x5500;
+	while(1)
+	{
+		int i;
+		*rGPFDAT = 0x10;
+		delay(500);
+
+		for(i=1; i<=4; i=i+1){
+			*rGPFDAT <<= 1;
+			delay(500);
+		}
+		for(i=1; i<=4; i=i+1){
+			*rGPFDAT >>= 1;
+			delay(500);
+		}
+	}
+	return 1;
+}
+```
+
+### 注意事项
+
+- 一定要结合电路图判断时**高电平有效还是低电平有效**，同时看**LED连接的是哪些引脚，并在表格中确定这些引脚是`GPFCON`的哪些位**
+- 一定要在给出的表格确定`*rGPFCON`和`*rGPFDAT`的**初始地址**，不同板子地址不一样
+- 一般LED显示相应的`GPFCON`使用的**引脚位置`01`，表示输出，但是具体还是要看一下表格确认一下**，以免有的板子`01`就不是输出
+- 最后通过`GPFDAT`（8位）传送数据信号，注意这个变量位数一般是`GPFCON`（16位）的一半，**引脚关系也是对应的**，例如`GPFCON`最高两位和`GPFDAT`最高一位都表示`GPF7`引脚，再根据高低电平，相应位置传递0或1即可。
+- 注意C语言指针变量赋值的格式。
+
+## OpenMP
 
 - #pragma
+  
   - parallel：表示这段代码将被并行执行；
   - for：表示将循环计算任务分配到多个线程中并行执行；
   - sections：用于实现多个结构块语句的任务分担；
@@ -145,7 +245,7 @@ SWI_Handler
   - atomic：用于指定一个数据操作需要原子性地完成；
   - master：用于指定一段代码由主线程执行；
   - Thread private：用于指定一个或多个变量是线程专用。
-
+  
 - 基本使用
 
   - `#pragma omp parallel for`   ⭐⭐⭐⭐⭐
@@ -377,7 +477,9 @@ A：ROM = Code + RO + RW；RAM = RW + ZI；
 
 **Q：如果调试过程中程序工作正常，但写入 ROM 后上电程序不能正确执行，可能的原因是什么？**
 
-A：电源有问题；复位电路有问题（缺少 reset 复位程序）；BOOT 启动有问题（启动模式选择错误）；复位以后，中断向量表不在程序起始位 0x00。
+A1：电源有问题；复位电路有问题（缺少 reset 复位程序）；BOOT 启动有问题（启动模式选择错误）；复位以后，中断向量表不在程序起始位 0x00。
+
+A2：复位时中断向量表是空的，0x00000000没有中断向量表；写了初始化程序，初始化程序错误 ；链接顺序出错，这是导致没有中断向量表的原因之一；模式选择错误，启动模式选择错误。
 
 **Q：如果实现上电后能够自动执行，需要哪些条件？**
 
@@ -397,7 +499,9 @@ A：不能。BL和B两个指令的区別在于BL指令将当前的PC保存到LR�
 
 A：Cache 大小，替换策略（直接相连等），程序的结构和数据的访问方式
 
+**Q：某系统上电后不能自启动，可能的原因是？**
 
+A：没有装在Flash里；缺少Reset向量；缺少启动程序；板子坏了。
 
 ## 常见报错信息解析
 

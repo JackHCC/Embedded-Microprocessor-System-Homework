@@ -92,6 +92,7 @@
 
 - 软中断流程
 - 系统启动流程（startup.s）
+- LED显示实验
 - OpenMP编程
 - CUDA编程
 - Keil报错问题
