@@ -395,7 +395,7 @@ ThreadID=BlockID*blockDim.x*blockDim.y*blockDim.z
 
 ![](../Image/review-3.png)
 
-- 一维CUDA模板代码
+- **一维CUDA模板代码**
 
 ```c
 // Kernel definition
@@ -414,7 +414,7 @@ int main()
 }
 ```
 
-- 二维CUDA一个Block模板代码
+- **二维CUDA一个Block模板代码**
 
 ```c
 // Kernel definition
@@ -436,12 +436,11 @@ int main()
 }
 ```
 
-- 二维CUDA多个Block模板代码  ⭐⭐⭐⭐⭐
+- **二维CUDA多个Block模板代码**  ⭐⭐⭐⭐⭐
 
 ```c
 // Kernel definition
-__global__ void MatAdd(float A[N][N], float B[N][N],
-float C[N][N])
+__global__ void MatAdd(float A[N][N], float B[N][N], float C[N][N])
 {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
     int j = blockIdx.y * blockDim.y + threadIdx.y;	// 采用blockIDx * blockDim + threadIDx 的方式赋值变量
@@ -457,6 +456,19 @@ int main()
     dim3 numBlocks(N / threadsPerBlock.x, N / threadsPerBlock.y);	// 计算每个维度需要多少个Block，返回Block数目
     MatAdd<<<numBlocks, threadsPerBlock>>>(A, B, C);
     ...
+}
+```
+
+- **二维CUDA多个Block参数为指针写法**
+
+```c
+// Kernel definition
+__global__ void MatAdd(float *A, float *B, float *C, int N)
+{
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+    int j = blockIdx.y * blockDim.y + threadIdx.y;	// 采用blockIDx * blockDim + threadIDx 的方式赋值变量
+    *(C+j*N+i) = *(B+j*N+i) + *(A+j*N+i);
+    // 或 C[j*N+i] = B[j*N+i] + A[j*N+i];
 }
 ```
 
@@ -528,6 +540,10 @@ A：main单词拼写错误；启动代码不对；没有将main.c文件添加到
 
 A：免费开源；指令数简洁，仅40多条；性能好；架构与实现分离，不需要特定实现进行优化；易于编程编译链接；程序大小。
 
+**Q：中断程序无响应的原因？**
+
+A：没有中断服务程序；中断被屏蔽。
+
 ## 常见报错信息解析
 
 List of the armasm error and warning messages
@@ -555,3 +571,49 @@ List of the armasm error and warning messages
   - LDR第二个参数需要是个地址，不能直接串寄存器
   - 编译阶段错误
 - "Error: A1647E: Bad register name symbol, expected Integer register"
+
+## 一些零散的Tips
+
+- ARM9的三类地址：
+  - 虚拟地址（VA），是程序中的逻辑地址，0x00000000~0xFFFFFFFF
+  - 改进的虚拟地址（MVA），由于多个进程执行，逻辑地址会重合。所以，跟据进程号将逻辑地址分布到整个内存中。MVA = (PID << 25) | VA。PID占7位，所以最多只能有128个进程，每个进程只能分到 32MB 的逻辑地址空间
+  - 物理地址（PA），MVA通过MMU转换后的地址
+- ARM11和 cortex-a可以任意修改异常向量基地址。ARM9只可以在0地址或0xffff_0000中
+- Cortex-A9,A5支持多核处理器；Arm7以前冯诺依曼体系结构，Arm9以后哈佛体系结构
+- adr最大偏移：不对齐255Byte，对齐1020Byte（255Words）；adrl最大偏移：不对齐64KB，对齐256KB；Thumb指令没有adrl
+- Thumb指令特点：
+  - 使用ARM的r0-r7 8个通用寄存器
+  - Thumb指令没有条件执行 
+  - 指令自动更新标志，不需加（s） 
+  - 仅有LDMIA（STMIA） ；只有IA一种形式且必须加“！”
+  - 在数据运算指令中，不支持第二操作数移位
+- 参数返回规则
+  - 结果为32bit整数时，通过r0传递 
+  - 结果为64bit整数时，通过r0和R1传递 
+  - 结果为浮点数时，通过浮点寄存器返回(f0,d0) 
+  - 更多的数据通过内存返回
+- 嵌入汇编
+  - 不支持 LDR Rn,= XXX 和 ADR, ADRL 伪指令
+  - 不支持 BX 
+  - 用”&”替代 “0x” 表示16位数据
+  - 无需保存和恢复寄存器
+- 向量表大小32个字节，每个异常向量占据4个字节
+- 程序优化 
+  - 程序执行功耗 
+    - 减少指令数，减少执行时间（t) 
+    - 选用功耗低的指令(P) 
+  - 系统管理（P） 
+    - 控制处理器：降低主频，状态管理，模式管理
+    - 控制系统：减少内存访问次数，关断空闲外设
+- 功率状态： Dynamic>Standby（待机）>Sleep(idle)>off
+  - IDLE只能外部中断唤醒，Standby（Slow）可以程序唤醒
+- 参数：
+  - 宽参数传递，被调用者把参数缩小到正确的范围。 
+  - 宽返回，调用者把返回值缩小到正确的范围。 
+  - 窄参数传递，调用者把参数缩小到正确的范围。 
+  - 窄返回，被调用者把参数缩小到正确的范围。 
+  - GCC是宽参数传递和宽返回。 
+  - armcc 是窄参数传递与窄返回 
+  - 尽量用**int 或 unsigned int 型参数**。 
+  - 对于**返回值尽量避免使用char和short类型**
+- 用局部变量替换全局变量，减少程序访问存储器的次数
