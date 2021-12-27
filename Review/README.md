@@ -128,7 +128,8 @@ SWI_Handler
   - 设置中断入口IRQ_Entry
   - 实现Reset_Handler
 - BootLoader移植需要修改什么代码？
-  - Start.s是采用汇编语言编写的U-Boot程序入口代码，完成对底层硬件的初始化，其中有一个很重要的功能是从NAND FLASH中把 Stage2阶段的代码复制到 SDRAM中。在此阶段，涉及到对 NAND FLASH的读操作，在U-Boot中，没有对 NANDFLASH读操作的驱动，采用以下方法实现：通过调用 board/smdk2410/ nand_read.C中的 nand_read_11函数将 Stage2阶段的代码复制到ram中。
+  - 管理和控制处理器内部设备的**寄存器地址和数值**。
+  - 不同处理器之间**有差别的地方**都需要进行修改。
 
 ## LED显示实验
 
@@ -463,8 +464,6 @@ int main()
 
 ![](../Image/review-4.png)
 
-
-
 ## 一些问题
 
 **Q：影响处理器性能（CPI等）的因素有哪些？**
@@ -503,7 +502,39 @@ A：Cache 大小，替换策略（直接相连等），程序的结构和数据�
 
 A：没有装在Flash里；缺少Reset向量；缺少启动程序；板子坏了。
 
+**Q：程序对Cache命中率的影响？**
+
+A：编写程序时，对同一个变量处理过程尽量放置在相近位置，这样可以提高 Cache的命中率。
+
+**Q：程序中如何实现地址转换？**
+
+内存管理单元(Memory Manage Unit，MMU) ：
+
+- 控制虚拟地址（VA）映射到物理地址（PA） 
+- 控制内存的访问权限 
+- 控制可缓存性和缓冲性
+
+![](../Image/review-7.png)
+
+**Q：影响流水线加速效果的因素？**
+
+A：流水线的的结构（分级数量和不同级执行时间的均匀性），能够连续顺序执行指令的数量，以及指令之间数据的相关性影响流水线加速比。
+
+**Q：如果调试时无法进入main，可能的原因是什么？**
+
+A：main单词拼写错误；启动代码不对；没有将main.c文件添加到工程文件中。
+
+**Q：RISC-V有哪些特点？**
+
+A：免费开源；指令数简洁，仅40多条；性能好；架构与实现分离，不需要特定实现进行优化；易于编程编译链接；程序大小。
+
 ## 常见报错信息解析
+
+List of the armasm error and warning messages
+
+👉 [Keil 报错信息手册](https://www.keil.com/support/man/docs/armclang_err/armclang_err_dom1365071831285.htm)
+
+**常见：**
 
 - “Error: A163E: Unknown opcode Mov, expecting opcode or Macro”
   - 因为 arm 汇编器对标志符的大小写敏感，因此书写标志符及指令时，大小写要一致。在arm汇编程序中，指令、寄存器名可以全部为大写，也可以全部为小写，但是不能大小写混合使用 
@@ -520,3 +551,7 @@ A：没有装在Flash里；缺少Reset向量；缺少启动程序；板子坏了
 - “Error: Target DLL has been canceled. Debugger aborted”
   - 目标 DLL（动态链接库） 已被取消，调试器终止
   - 下载调试阶段错误
+- "Error: A1114E: Expected register relative expression"
+  - LDR第二个参数需要是个地址，不能直接串寄存器
+  - 编译阶段错误
+- "Error: A1647E: Bad register name symbol, expected Integer register"
