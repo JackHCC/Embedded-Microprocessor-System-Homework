@@ -625,3 +625,6 @@ List of the armasm error and warning messages
   - 尽量用**int 或 unsigned int 型参数**。 
   - 对于**返回值尽量避免使用char和short类型**
 - 用局部变量替换全局变量，减少程序访问存储器的次数
+
+
+© [JackHCC](https://github.com/JackHCC)
